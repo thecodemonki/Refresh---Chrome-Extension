@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Work Timer",
+  "version": "1.0",
+  "description": "Track your productive work time with focus mode",
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "app/background/background.js"
+  },
+  "action": {
+    "default_popup": "app/popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["app/content/content.js"],
+      "css": ["app/content/content.css"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+  "background": {
+    "service_worker": "app/background/background.js"
+  }
+}
+
+
