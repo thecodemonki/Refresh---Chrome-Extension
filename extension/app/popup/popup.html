@@ -42,12 +42,82 @@
 
     <div class="stats">
       <div class="stat-item">
-        <div class="stat-label">Today's Total</div>
+        <div class="stat-label">Today's Work</div>
         <div class="stat-value" id="todayTotal">0h 0m</div>
       </div>
       <div class="stat-item">
         <div class="stat-label">Current Session</div>
         <div class="stat-value" id="currentSession">0h 0m</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Distractions</div>
+        <div class="stat-value" id="distractionTime">0h 0m</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Focus Score</div>
+        <div class="stat-value" id="focusScore">100%</div>
+      </div>
+    </div>
+
+    <!-- Settings Section -->
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Lock In Mode</h3>
+        <label class="toggle">
+          <input type="checkbox" id="lockInToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <p class="section-description">Block distracting websites while timer is active</p>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Distraction Watchlist</h3>
+      </div>
+      <p class="section-description">Sites to block during work sessions</p>
+      
+      <div class="watchlist-input">
+        <input type="text" id="siteInput" placeholder="youtube.com" class="input-field">
+        <button class="btn btn-add" id="addSiteBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Add
+        </button>
+      </div>
+
+      <div class="watchlist" id="watchlistContainer">
+        <!-- Sites will be added here dynamically -->
+      </div>
+    </div>
+
+    <!-- Reminders Section -->
+    <div class="section">
+      <div class="section-header">
+        <h3 class="section-title">Reminders</h3>
+      </div>
+      
+      <div class="reminder-item">
+        <div class="reminder-info">
+          <div class="reminder-label">Posture Check</div>
+          <div class="reminder-desc">Every 30 minutes</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="postureToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="reminder-item">
+        <div class="reminder-info">
+          <div class="reminder-label">Eye Rest (20-20-20)</div>
+          <div class="reminder-desc">Every 20 minutes</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="eyeRestToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
       </div>
     </div>
   </div>

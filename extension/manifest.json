@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Work Timer",
-  "version": "1.0",
-  "description": "Track your productive work time with focus mode",
+  "name": "Work Timer - Productivity Tracker",
+  "version": "1.0.0",
+  "description": "Track your work time, block distractions, and stay focused with smart reminders.",
   "permissions": [
     "storage",
     "tabs",
+    "notifications",
     "activeTab"
   ],
   "host_permissions": [
@@ -22,13 +23,7 @@
       "matches": ["<all_urls>"],
       "js": ["app/content/content.js"],
       "css": ["app/content/content.css"],
-      "run_at": "document_end",
-      "all_frames": false
+      "run_at": "document_end"
     }
-  ],
-  "background": {
-    "service_worker": "app/background/background.js"
-  }
+  ]
 }
-
-
