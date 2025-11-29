@@ -9,13 +9,27 @@ let overlayElement = null;
 function createOverlay() {
   if (overlayElement) return overlayElement;
   
+  // Random motivational messages
+  const messages = [
+    "Stay focused. Your future self will thank you.",
+    "Great work happens when you eliminate distractions.",
+    "You're building something amazing. Keep going.",
+    "Focus is your superpower. Use it wisely.",
+    "Every moment of focus is an investment in yourself.",
+    "Distractions fade. Your goals remain. Choose wisely.",
+    "The best work happens in deep focus.",
+    "You've got this. Stay in the zone."
+  ];
+  
+  const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+  
   const overlay = document.createElement('div');
   overlay.id = 'workTimerOverlay';
   overlay.innerHTML = `
     <div class="overlay-content">
-      <div class="overlay-icon">🔒</div>
-      <h1 class="overlay-title">Lock In Mode Active</h1>
-      <p class="overlay-message">Focus on your work. This site is blocked during your work session.</p>
+      <div class="overlay-icon">🎯</div>
+      <h1 class="overlay-title">Focus Mode Active</h1>
+      <p class="overlay-message">${randomMessage}</p>
       <p class="overlay-hint">Stop the timer to access this site</p>
     </div>
   `;
@@ -56,40 +70,63 @@ function hideOverlay() {
   }
 }
 
-// Check if current site is in the distraction watchlist
-async function isDistractingSite() {
+// Check if current site should be blocked
+async function shouldBlockSite() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['watchlist', 'lockInEnabled'], (result) => {
-      const watchlist = result.watchlist || [];
-      const lockInEnabled = result.lockInEnabled !== false; // Default true
+    chrome.storage.local.get(['watchlist', 'whitelist', 'lockInEnabled', 'listMode'], (result) => {
+      const lockInEnabled = result.lockInEnabled !== false;
       
-      if (!lockInEnabled || watchlist.length === 0) {
+      if (!lockInEnabled) {
         resolve(false);
         return;
       }
       
+      const listMode = result.listMode || 'blacklist';
       const currentUrl = window.location.hostname.toLowerCase();
+      const cleanCurrent = currentUrl.replace(/^www\./, '');
       
-      // Check if current site matches any watchlist entry
-      const isBlocked = watchlist.some(site => {
-        const siteLower = site.toLowerCase();
-        // Remove www. for comparison
-        const cleanSite = siteLower.replace(/^www\./, '');
-        const cleanCurrent = currentUrl.replace(/^www\./, '');
+      if (listMode === 'whitelist') {
+        // Whitelist mode: block everything EXCEPT whitelist
+        const whitelist = result.whitelist || [];
         
-        return cleanCurrent.includes(cleanSite) || cleanSite.includes(cleanCurrent);
-      });
-      
-      resolve(isBlocked);
+        if (whitelist.length === 0) {
+          // No whitelist sites = don't block anything
+          resolve(false);
+          return;
+        }
+        
+        const isAllowed = whitelist.some(site => {
+          const cleanSite = site.toLowerCase().replace(/^www\./, '');
+          return cleanCurrent.includes(cleanSite) || cleanSite.includes(cleanCurrent);
+        });
+        
+        // Block if NOT in whitelist
+        resolve(!isAllowed);
+      } else {
+        // Blacklist mode: block only blacklist sites
+        const watchlist = result.watchlist || [];
+        
+        if (watchlist.length === 0) {
+          resolve(false);
+          return;
+        }
+        
+        const isBlocked = watchlist.some(site => {
+          const cleanSite = site.toLowerCase().replace(/^www\./, '');
+          return cleanCurrent.includes(cleanSite) || cleanSite.includes(cleanCurrent);
+        });
+        
+        resolve(isBlocked);
+      }
     });
   });
 }
 
 // Handle timer status updates
 async function handleTimerStatus(isActive) {
-  const isDistracting = await isDistractingSite();
+  const shouldBlock = await shouldBlockSite();
   
-  if (isActive && isDistracting) {
+  if (isActive && shouldBlock) {
     showOverlay();
   } else {
     hideOverlay();

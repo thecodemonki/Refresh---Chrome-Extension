@@ -5,7 +5,11 @@
 }
 
 body {
-  width: 360px;
+  width: 400px;
+  min-height: 500px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   background: linear-gradient(to bottom, #fafafa, #f4f4f5);
   color: #09090b;
@@ -15,11 +19,12 @@ body {
 
 .container {
   padding: 24px;
+  padding-bottom: 32px;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .title {
@@ -40,7 +45,7 @@ body {
   background: white;
   border-radius: 16px;
   padding: 32px 24px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
   border: 1px solid #e4e4e7;
   text-align: center;
@@ -74,7 +79,7 @@ body {
 .controls {
   display: flex;
   gap: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .btn {
@@ -151,19 +156,20 @@ body {
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
 .stat-item {
   background: white;
-  padding: 16px;
+  padding: 14px;
   border-radius: 12px;
   border: 1px solid #e4e4e7;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 10px;
   color: #71717a;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -172,22 +178,308 @@ body {
 }
 
 .stat-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #09090b;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
 }
 
+/* Mode Selector */
+.mode-selector {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  background: #f4f4f5;
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  background: transparent;
+  color: #71717a;
+}
+
+.mode-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.mode-btn.active {
+  background: white;
+  color: #3b82f6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.mode-btn:hover:not(.active) {
+  color: #52525b;
+}
+
+.mode-description {
+  font-size: 11px;
+  color: #a1a1aa;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Sections */
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #09090b;
+}
+
+.section-description {
+  font-size: 12px;
+  color: #71717a;
+  margin-bottom: 12px;
+}
+
+/* Toggle Switch */
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 42px;
+  height: 24px;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e4e4e7;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.toggle input:checked + .toggle-slider {
+  background-color: #3b82f6;
+}
+
+.toggle input:checked + .toggle-slider:before {
+  transform: translateX(18px);
+}
+
+/* Watchlist */
+.watchlist-input {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.input-field {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1.5px solid #e4e4e7;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.input-field:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-add {
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.btn-add:hover {
+  background: #2563eb;
+}
+
+.watchlist {
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.watchlist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-radius: 6px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.watchlist-item:last-child {
+  margin-bottom: 0;
+}
+
+.watchlist-site {
+  color: #09090b;
+  font-weight: 500;
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-remove:hover {
+  background: #fef2f2;
+}
+
+.watchlist-empty {
+  text-align: center;
+  color: #a1a1aa;
+  font-size: 12px;
+  padding: 16px;
+}
+
+/* Reminders */
+.reminder-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.reminder-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.reminder-item:first-child {
+  padding-top: 0;
+}
+
+.reminder-info {
+  flex: 1;
+}
+
+.reminder-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #09090b;
+  margin-bottom: 2px;
+}
+
+.reminder-desc {
+  font-size: 11px;
+  color: #71717a;
+}
+
 /* Smooth transitions */
 .timer-display,
 .btn,
-.stat-item {
+.stat-item,
+.section {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Focus states for accessibility */
-.btn:focus-visible {
+.btn:focus-visible,
+.input-field:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+body::-webkit-scrollbar {
+  width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+
+body::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+.watchlist::-webkit-scrollbar {
+  width: 6px;
+}
+
+.watchlist::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.watchlist::-webkit-scrollbar-thumb {
+  background: #e4e4e7;
+  border-radius: 3px;
+}
+
+.watchlist::-webkit-scrollbar-thumb:hover {
+  background: #d4d4d8;
 }

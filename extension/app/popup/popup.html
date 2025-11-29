@@ -68,12 +68,29 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
-      <p class="section-description">Block distracting websites while timer is active</p>
+      <p class="section-description">Control website access during work sessions</p>
+      
+      <!-- Mode Selector -->
+      <div class="mode-selector">
+        <button class="mode-btn active" id="blacklistModeBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 1L1 8L8 15M8 1L15 8L8 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Blacklist Mode
+        </button>
+        <button class="mode-btn" id="whitelistModeBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 4L6 11L3 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Whitelist Mode
+        </button>
+      </div>
+      <p class="mode-description" id="modeDescription">Block specific distracting sites</p>
     </div>
 
-    <div class="section">
+    <div class="section" id="blacklistSection">
       <div class="section-header">
-        <h3 class="section-title">Distraction Watchlist</h3>
+        <h3 class="section-title">Distraction Blocklist</h3>
       </div>
       <p class="section-description">Sites to block during work sessions</p>
       
@@ -88,6 +105,27 @@
       </div>
 
       <div class="watchlist" id="watchlistContainer">
+        <!-- Sites will be added here dynamically -->
+      </div>
+    </div>
+
+    <div class="section" id="whitelistSection" style="display: none;">
+      <div class="section-header">
+        <h3 class="section-title">Allowed Sites (Whitelist)</h3>
+      </div>
+      <p class="section-description">Only these sites can be accessed during work</p>
+      
+      <div class="watchlist-input">
+        <input type="text" id="whitelistInput" placeholder="docs.google.com" class="input-field">
+        <button class="btn btn-add" id="addWhitelistBtn">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Add
+        </button>
+      </div>
+
+      <div class="watchlist" id="whitelistContainer">
         <!-- Sites will be added here dynamically -->
       </div>
     </div>

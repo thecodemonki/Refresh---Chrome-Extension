@@ -32,6 +32,14 @@ const lockInToggle = document.getElementById('lockInToggle');
 const siteInput = document.getElementById('siteInput');
 const addSiteBtn = document.getElementById('addSiteBtn');
 const watchlistContainer = document.getElementById('watchlistContainer');
+const whitelistInput = document.getElementById('whitelistInput');
+const addWhitelistBtn = document.getElementById('addWhitelistBtn');
+const whitelistContainer = document.getElementById('whitelistContainer');
+const blacklistModeBtn = document.getElementById('blacklistModeBtn');
+const whitelistModeBtn = document.getElementById('whitelistModeBtn');
+const modeDescription = document.getElementById('modeDescription');
+const blacklistSection = document.getElementById('blacklistSection');
+const whitelistSection = document.getElementById('whitelistSection');
 const postureToggle = document.getElementById('postureToggle');
 const eyeRestToggle = document.getElementById('eyeRestToggle');
 
@@ -303,9 +311,11 @@ function loadState() {
 
 // Watchlist management
 function loadWatchlist() {
-  chrome.storage.local.get(['watchlist'], (result) => {
+  chrome.storage.local.get(['watchlist', 'whitelist'], (result) => {
     const watchlist = result.watchlist || [];
+    const whitelist = result.whitelist || [];
     renderWatchlist(watchlist);
+    renderWhitelist(whitelist);
   });
 }
 
@@ -318,7 +328,7 @@ function renderWatchlist(watchlist) {
   watchlistContainer.innerHTML = watchlist.map(site => `
     <div class="watchlist-item">
       <span class="watchlist-site">${site}</span>
-      <button class="btn-remove" data-site="${site}">
+      <button class="btn-remove" data-site="${site}" data-list="blacklist">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
@@ -327,10 +337,36 @@ function renderWatchlist(watchlist) {
   `).join('');
   
   // Add event listeners to remove buttons
-  document.querySelectorAll('.btn-remove').forEach(btn => {
+  document.querySelectorAll('[data-list="blacklist"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const site = btn.getAttribute('data-site');
       removeSiteFromWatchlist(site);
+    });
+  });
+}
+
+function renderWhitelist(whitelist) {
+  if (whitelist.length === 0) {
+    whitelistContainer.innerHTML = '<div class="watchlist-empty">No sites added yet. Add productive sites!</div>';
+    return;
+  }
+  
+  whitelistContainer.innerHTML = whitelist.map(site => `
+    <div class="watchlist-item">
+      <span class="watchlist-site">${site}</span>
+      <button class="btn-remove" data-site="${site}" data-list="whitelist">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  `).join('');
+  
+  // Add event listeners to remove buttons
+  document.querySelectorAll('[data-list="whitelist"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const site = btn.getAttribute('data-site');
+      removeSiteFromWhitelist(site);
     });
   });
 }
@@ -373,12 +409,75 @@ function removeSiteFromWatchlist(site) {
   });
 }
 
+function addSiteToWhitelist() {
+  const site = whitelistInput.value.trim().toLowerCase();
+  
+  if (!site) return;
+  
+  chrome.storage.local.get(['whitelist'], (result) => {
+    const whitelist = result.whitelist || [];
+    
+    if (whitelist.includes(site)) {
+      whitelistInput.value = '';
+      return;
+    }
+    
+    whitelist.push(site);
+    chrome.storage.local.set({ whitelist }, () => {
+      renderWhitelist(whitelist);
+      whitelistInput.value = '';
+      
+      // Notify content scripts
+      chrome.runtime.sendMessage({ type: 'WATCHLIST_UPDATED' });
+    });
+  });
+}
+
+function removeSiteFromWhitelist(site) {
+  chrome.storage.local.get(['whitelist'], (result) => {
+    const whitelist = result.whitelist || [];
+    const filtered = whitelist.filter(s => s !== site);
+    
+    chrome.storage.local.set({ whitelist: filtered }, () => {
+      renderWhitelist(filtered);
+      
+      // Notify content scripts
+      chrome.runtime.sendMessage({ type: 'WATCHLIST_UPDATED' });
+    });
+  });
+}
+
 // Load settings
 function loadSettings() {
-  chrome.storage.local.get(['lockInEnabled', 'postureEnabled', 'eyeRestEnabled'], (result) => {
+  chrome.storage.local.get(['lockInEnabled', 'postureEnabled', 'eyeRestEnabled', 'listMode'], (result) => {
     lockInToggle.checked = result.lockInEnabled !== false;
     postureToggle.checked = result.postureEnabled !== false;
     eyeRestToggle.checked = result.eyeRestEnabled !== false;
+    
+    // Load list mode (blacklist or whitelist)
+    const listMode = result.listMode || 'blacklist';
+    updateListMode(listMode);
+  });
+}
+
+// Switch between blacklist and whitelist mode
+function updateListMode(mode) {
+  if (mode === 'whitelist') {
+    blacklistModeBtn.classList.remove('active');
+    whitelistModeBtn.classList.add('active');
+    blacklistSection.style.display = 'none';
+    whitelistSection.style.display = 'block';
+    modeDescription.textContent = 'Only allow specific productive sites';
+  } else {
+    blacklistModeBtn.classList.add('active');
+    whitelistModeBtn.classList.remove('active');
+    blacklistSection.style.display = 'block';
+    whitelistSection.style.display = 'none';
+    modeDescription.textContent = 'Block specific distracting sites';
+  }
+  
+  chrome.storage.local.set({ listMode: mode }, () => {
+    chrome.runtime.sendMessage({ type: 'WATCHLIST_UPDATED' });
   });
 }
 
@@ -404,6 +503,24 @@ if (siteInput) {
       addSiteToWatchlist();
     }
   });
+}
+
+// Whitelist
+if (addWhitelistBtn) addWhitelistBtn.addEventListener('click', addSiteToWhitelist);
+if (whitelistInput) {
+  whitelistInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addSiteToWhitelist();
+    }
+  });
+}
+
+// Mode switching
+if (blacklistModeBtn) {
+  blacklistModeBtn.addEventListener('click', () => updateListMode('blacklist'));
+}
+if (whitelistModeBtn) {
+  whitelistModeBtn.addEventListener('click', () => updateListMode('whitelist'));
 }
 
 // Reminder toggles
