@@ -5,7 +5,22 @@ console.log("Work Timer content script loaded");
 let overlayActive = false;
 let overlayElement = null;
 let dimOverlayElement = null;
-let isTabActive = !document.hidden;
+let isTabActive = true;
+let lastActivityTime = Date.now();
+
+// Track user activity
+document.addEventListener('mousemove', reportActivity);
+document.addEventListener('keydown', reportActivity);
+document.addEventListener('click', reportActivity);
+document.addEventListener('scroll', reportActivity);
+
+function reportActivity() {
+  const now = Date.now();
+  if (now - lastActivityTime > 1000) { // Throttle to once per second
+    lastActivityTime = now;
+    chrome.runtime.sendMessage({ type: 'USER_ACTIVITY' }).catch(() => {});
+  }
+}
 
 // Listen for tab visibility changes
 document.addEventListener('visibilitychange', () => {
@@ -17,6 +32,7 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('focus', () => {
   isTabActive = true;
   updateDimOverlay();
+  reportActivity();
 });
 
 window.addEventListener('blur', () => {
@@ -38,10 +54,11 @@ function createDimOverlay() {
     bottom: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background: rgba(0, 0, 0, 0.4) !important;
+    background: rgba(0, 0, 0, 0.5) !important;
     z-index: 2147483646 !important;
     pointer-events: none !important;
     display: none !important;
+    opacity: 0 !important;
     transition: opacity 0.3s ease !important;
   `;
   
@@ -53,7 +70,7 @@ function createDimOverlay() {
 // Update dim overlay based on tab activity and timer status
 function updateDimOverlay() {
   chrome.storage.local.get(['dimInactive', 'timerState'], (result) => {
-    const dimEnabled = result.dimInactive !== false; // Default true
+    const dimEnabled = result.dimInactive !== false;
     const timerState = result.timerState || {};
     const timerActive = timerState.isRunning && !timerState.isPaused;
     
@@ -94,7 +111,6 @@ function hideDimOverlay() {
 function createOverlay() {
   if (overlayElement) return overlayElement;
   
-  // Random motivational messages
   const messages = [
     "Stay focused. Your future self will thank you.",
     "Great work happens when you eliminate distractions.",
@@ -132,7 +148,6 @@ function showOverlay() {
   overlayElement.style.display = 'flex';
   overlayActive = true;
   
-  // Prevent scrolling on body and html
   document.body.style.overflow = 'hidden';
   document.body.style.position = 'fixed';
   document.body.style.width = '100%';
@@ -146,7 +161,6 @@ function hideOverlay() {
     overlayElement.style.display = 'none';
     overlayActive = false;
     
-    // Restore scrolling
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
@@ -171,11 +185,9 @@ async function shouldBlockSite() {
       const cleanCurrent = currentUrl.replace(/^www\./, '');
       
       if (listMode === 'whitelist') {
-        // Whitelist mode: block everything EXCEPT whitelist
         const whitelist = result.whitelist || [];
         
         if (whitelist.length === 0) {
-          // No whitelist sites = don't block anything
           resolve(false);
           return;
         }
@@ -185,10 +197,8 @@ async function shouldBlockSite() {
           return cleanCurrent.includes(cleanSite) || cleanSite.includes(cleanCurrent);
         });
         
-        // Block if NOT in whitelist
         resolve(!isAllowed);
       } else {
-        // Blacklist mode: block only blacklist sites
         const watchlist = result.watchlist || [];
         
         if (watchlist.length === 0) {
@@ -224,13 +234,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleTimerStatus(message.isActive);
     updateDimOverlay();
   } else if (message.type === 'WATCHLIST_UPDATED') {
-    // Recheck if current site should be blocked
     chrome.runtime.sendMessage({ type: 'GET_TIMER_STATUS' }, (response) => {
       if (response && response.isActive) {
         handleTimerStatus(true);
       }
     });
   } else if (message.type === 'DIM_SETTINGS_CHANGED') {
+    updateDimOverlay();
+  } else if (message.type === 'UPDATE_DIM_STATUS') {
+    isTabActive = message.isActive;
     updateDimOverlay();
   }
   

@@ -3,18 +3,25 @@
 let timerActive = false;
 let currentTabId = null;
 let tabStartTime = null;
-let tabActivity = {}; // Track time spent on each domain
+let tabActivity = {};
+let lastActivityTime = Date.now();
+let idleCheckInterval = null;
+
+// Auto-pause settings
+const IDLE_THRESHOLD = 60; // seconds of inactivity before auto-pause
+const IDLE_CHECK_INTERVAL = 5000; // check every 5 seconds
 
 // Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TIMER_STATUS_CHANGED') {
     timerActive = message.isActive;
     
-    // Start/stop tracking tab activity
     if (timerActive) {
       startTabTracking();
+      startIdleDetection();
     } else {
       stopTabTracking();
+      stopIdleDetection();
     }
     
     // Broadcast to all tabs
@@ -33,7 +40,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === 'GET_TIMER_STATUS') {
     sendResponse({ isActive: timerActive });
   } else if (message.type === 'WATCHLIST_UPDATED') {
-    // Notify all tabs that watchlist has changed
     chrome.tabs.query({}, (tabs) => {
       tabs.forEach((tab) => {
         if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
@@ -44,24 +50,92 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     });
     sendResponse({ success: true });
+  } else if (message.type === 'USER_ACTIVITY') {
+    lastActivityTime = Date.now();
+    sendResponse({ success: true });
+  } else if (message.type === 'AUTO_PAUSE_TIMER') {
+    // Auto-pause the timer due to inactivity
+    chrome.storage.local.get(['timerState'], (result) => {
+      const timerState = result.timerState || {};
+      if (timerState.isRunning && !timerState.isPaused) {
+        timerState.isPaused = true;
+        timerState.autoPaused = true;
+        timerState.elapsedTime = Date.now() - timerState.startTime + (timerState.elapsedTime || 0);
+        chrome.storage.local.set({ timerState });
+        
+        // Show notification
+        chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon48.png',
+          title: '⏸️ Timer Auto-Paused',
+          message: 'Timer paused due to inactivity. Click to resume when you\'re back!',
+          priority: 1
+        });
+        
+        timerActive = false;
+        stopIdleDetection();
+      }
+    });
+    sendResponse({ success: true });
   }
   
   return true;
 });
 
+// Start idle detection
+function startIdleDetection() {
+  lastActivityTime = Date.now();
+  
+  if (idleCheckInterval) {
+    clearInterval(idleCheckInterval);
+  }
+  
+  // Use Chrome's idle API
+  chrome.idle.setDetectionInterval(IDLE_THRESHOLD);
+  
+  chrome.idle.onStateChanged.addListener(handleIdleStateChange);
+  
+  // Also do manual checks
+  idleCheckInterval = setInterval(() => {
+    const inactiveTime = (Date.now() - lastActivityTime) / 1000;
+    
+    if (inactiveTime > IDLE_THRESHOLD && timerActive) {
+      chrome.runtime.sendMessage({ type: 'AUTO_PAUSE_TIMER' });
+    }
+  }, IDLE_CHECK_INTERVAL);
+}
+
+// Handle idle state changes
+function handleIdleStateChange(state) {
+  if (state === 'idle' && timerActive) {
+    chrome.runtime.sendMessage({ type: 'AUTO_PAUSE_TIMER' });
+  } else if (state === 'active') {
+    lastActivityTime = Date.now();
+  }
+}
+
+// Stop idle detection
+function stopIdleDetection() {
+  if (idleCheckInterval) {
+    clearInterval(idleCheckInterval);
+    idleCheckInterval = null;
+  }
+  
+  chrome.idle.onStateChanged.removeListener(handleIdleStateChange);
+}
+
 // Track tab changes
 chrome.tabs.onActivated.addListener((activeInfo) => {
+  lastActivityTime = Date.now();
+  
   if (timerActive) {
-    // Save time for previous tab
     if (currentTabId !== null) {
       recordTabTime(currentTabId);
     }
     
-    // Start tracking new tab
     currentTabId = activeInfo.tabId;
     tabStartTime = Date.now();
     
-    // Send timer status to newly activated tab
     chrome.tabs.get(activeInfo.tabId, (tab) => {
       if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
         setTimeout(() => {
@@ -73,18 +147,21 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
       }
     });
   }
+  
+  // Update all tabs about which one is active
+  updateTabDimming(activeInfo.tabId);
 });
 
 // Track tab URL changes
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete') {
+    lastActivityTime = Date.now();
+    
     if (timerActive && tabId === currentTabId) {
-      // URL changed on current tab, record time for old URL
       recordTabTime(tabId);
       tabStartTime = Date.now();
     }
     
-    // Send timer status to updated tab
     if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
       setTimeout(() => {
         chrome.tabs.sendMessage(tabId, {
@@ -99,24 +176,48 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 // Track window focus changes
 chrome.windows.onFocusChanged.addListener((windowId) => {
   if (windowId === chrome.windows.WINDOW_ID_NONE) {
-    // Browser lost focus
     if (timerActive && currentTabId !== null) {
       recordTabTime(currentTabId);
       currentTabId = null;
       tabStartTime = null;
     }
   } else {
-    // Browser gained focus
+    lastActivityTime = Date.now();
+    
     if (timerActive) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
           currentTabId = tabs[0].id;
           tabStartTime = Date.now();
+          updateTabDimming(tabs[0].id);
         }
       });
     }
   }
 });
+
+// Update tab dimming for all tabs
+function updateTabDimming(activeTabId) {
+  chrome.storage.local.get(['dimInactive', 'timerState'], (result) => {
+    const dimEnabled = result.dimInactive !== false;
+    const timerState = result.timerState || {};
+    const timerActive = timerState.isRunning && !timerState.isPaused;
+    
+    if (!dimEnabled || !timerActive) return;
+    
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+        if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+          const isActive = tab.id === activeTabId;
+          chrome.tabs.sendMessage(tab.id, {
+            type: 'UPDATE_DIM_STATUS',
+            isActive: isActive
+          }).catch(() => {});
+        }
+      });
+    });
+  });
+}
 
 // Record time spent on a tab
 function recordTabTime(tabId) {
@@ -130,14 +231,12 @@ function recordTabTime(tabId) {
     
     const timeSpent = Date.now() - tabStartTime;
     
-    // Update time breakdown
     chrome.storage.local.get(['timeBreakdown'], (result) => {
       const breakdown = result.timeBreakdown || {};
       breakdown[domain] = (breakdown[domain] || 0) + timeSpent;
       chrome.storage.local.set({ timeBreakdown: breakdown });
     });
     
-    // Check if this domain is a distraction
     chrome.storage.local.get(['watchlist', 'whitelist', 'timerState', 'lockInEnabled', 'listMode'], (result) => {
       const watchlist = result.watchlist || [];
       const whitelist = result.whitelist || [];
@@ -146,10 +245,8 @@ function recordTabTime(tabId) {
       const timerState = result.timerState || {};
       
       if (lockInEnabled && isDistractingSite(domain, watchlist, whitelist, listMode)) {
-        // Add to distraction time
         const distractionTime = (timerState.distractionTime || 0) + timeSpent;
         timerState.distractionTime = distractionTime;
-        
         chrome.storage.local.set({ timerState });
       }
     });
@@ -169,7 +266,6 @@ function extractDomain(url) {
 // Check if domain should count as distraction
 function isDistractingSite(domain, watchlist, whitelist, listMode) {
   if (listMode === 'whitelist') {
-    // In whitelist mode, anything NOT in whitelist is a distraction
     if (whitelist.length === 0) return false;
     
     const isAllowed = whitelist.some(site => {
@@ -177,9 +273,8 @@ function isDistractingSite(domain, watchlist, whitelist, listMode) {
       return domain.includes(cleanSite) || cleanSite.includes(domain);
     });
     
-    return !isAllowed; // If not allowed, it's a distraction
+    return !isAllowed;
   } else {
-    // In blacklist mode, only blacklist sites are distractions
     return watchlist.some(site => {
       const cleanSite = site.toLowerCase().replace(/^www\./, '');
       return domain.includes(cleanSite) || cleanSite.includes(domain);
@@ -193,6 +288,7 @@ function startTabTracking() {
     if (tabs[0]) {
       currentTabId = tabs[0].id;
       tabStartTime = Date.now();
+      updateTabDimming(tabs[0].id);
     }
   });
 }
@@ -204,6 +300,18 @@ function stopTabTracking() {
   }
   currentTabId = null;
   tabStartTime = null;
+  
+  // Remove dimming from all tabs
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach((tab) => {
+      if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'UPDATE_DIM_STATUS',
+          isActive: true
+        }).catch(() => {});
+      }
+    });
+  });
 }
 
 // Initialize timer status from storage on startup
@@ -213,6 +321,7 @@ chrome.runtime.onStartup.addListener(() => {
       timerActive = result.timerState.isRunning && !result.timerState.isPaused;
       if (timerActive) {
         startTabTracking();
+        startIdleDetection();
       }
     }
   });
@@ -225,6 +334,7 @@ chrome.runtime.onInstalled.addListener(() => {
       timerActive = result.timerState.isRunning && !result.timerState.isPaused;
       if (timerActive) {
         startTabTracking();
+        startIdleDetection();
       }
     }
   });
@@ -259,6 +369,5 @@ chrome.runtime.onInstalled.addListener(() => {
   };
   
   checkAndResetBreakdown();
-  // Check daily
-  setInterval(checkAndResetBreakdown, 60 * 60 * 1000); // Every hour
+  setInterval(checkAndResetBreakdown, 60 * 60 * 1000);
 });

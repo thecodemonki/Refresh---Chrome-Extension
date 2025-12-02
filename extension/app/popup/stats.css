@@ -12,8 +12,8 @@
   --color-accent-blue: #3b82f6; /* blue-500 */
   --color-accent-purple: #8b5cf6; /* violet-500 */
   --color-danger: #ef4444; /* red-500 */
-  --border-radius-base: 8px;
-  --border-radius-lg: 12px;
+  --border-radius-base: 12px;
+  --border-radius-lg: 16px;
 }
 
 body {
@@ -22,8 +22,11 @@ body {
   background-color: var(--color-bg-primary);
   margin: 0;
   padding: 0;
-  width: 350px; /* Standard popup width */
-  min-height: 400px;
+  width: 400px;
+  min-height: 500px;
+  max-height: 600px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .container {
@@ -112,6 +115,13 @@ body {
 
 
 /* 4. Section Headers and Time Period Buttons */
+.section {
+  background-color: var(--color-bg-secondary);
+  border-radius: var(--border-radius-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -138,7 +148,7 @@ body {
   font-size: 0.75rem; /* 12px */
   font-weight: 500;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -206,7 +216,7 @@ body {
   align-items: center;
   padding: 8px 10px;
   background-color: var(--color-bg-secondary);
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .site-name {
@@ -243,7 +253,7 @@ body {
 .goal-input {
   width: 50px;
   padding: 8px;
-  border-radius: 6px;
+  border-radius: 12px;
   border: 1px solid #3f3f46;
   background-color: var(--color-bg-secondary);
   color: var(--color-text-primary);
@@ -262,7 +272,7 @@ body {
   color: var(--color-text-primary);
   border: none;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
   font-weight: 500;
   font-size: 0.875rem;
